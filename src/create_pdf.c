@@ -149,7 +149,8 @@ int create_pdf( nwipe_context_t* ptr )
     pdf_add_text_wrap(
         pdf, NULL, "Page 1 - Erasure Status", 14, 0, 670, PDF_BLACK, page_width, PDF_ALIGN_CENTER, &height );
     pdf_add_barcode( pdf, NULL, PDF_BARCODE_128A, 100, 790, 400, 25, barcode, PDF_BLACK );
-
+    
+#ifdef COMPLETE_REPORT    
     /* ------------------------ */
     /* Organisation Information */
 
@@ -224,6 +225,7 @@ int create_pdf( nwipe_context_t* ptr )
     {
         nwipe_log( NWIPE_LOG_ERROR, "Cannot locate group [Selected_Customer] in %s", nwipe_config_file );
     }
+#endif // COMPLETE_REPORT 
 
     /******************
      * Disk Information
