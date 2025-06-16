@@ -132,7 +132,7 @@ int check_device( nwipe_context_t*** c, PedDevice* dev, int dcount )
     int idx;
     int r;
     char tmp_serial[NWIPE_SERIALNUMBER_LENGTH + 1];
-    char tmp_device_model[128];
+    char tmp_device_model[128] = { 0 };
     nwipe_device_t bus;
     int is_ssd;
     int check_HPA;  // a flag that indicates whether we check for a HPA on this device
@@ -205,12 +205,19 @@ int check_device( nwipe_context_t*** c, PedDevice* dev, int dcount )
     memset( next_device, 0, sizeof( nwipe_context_t ) );
 
     /* Get device information */
-    next_device->device_model = strdup( tmp_device_model );
-    if( next_device->device_model == NULL )
+    if( *tmp_device_model != '\0' )
     {
-        nwipe_perror( errno, __FUNCTION__, "strdup" );
-        nwipe_log( NWIPE_LOG_FATAL, "Unable to copy the device model family." );
-        return 0;
+        next_device->device_model = strdup( tmp_device_model );
+        if( next_device->device_model == NULL )
+        {
+            nwipe_perror( errno, __FUNCTION__, "strdup" );
+            nwipe_log( NWIPE_LOG_FATAL, "Unable to copy the device model family." );
+            return 0;
+        }
+    }
+    else
+    {
+        next_device->device_model = dev->model;
     }
     remove_ATA_prefix( next_device->device_model );
 
