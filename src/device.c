@@ -132,6 +132,7 @@ int check_device( nwipe_context_t*** c, PedDevice* dev, int dcount )
     int idx;
     int r;
     char tmp_serial[NWIPE_SERIALNUMBER_LENGTH + 1];
+    char tmp_device_model[128];
     nwipe_device_t bus;
     int is_ssd;
     int check_HPA;  // a flag that indicates whether we check for a HPA on this device
@@ -156,7 +157,7 @@ int check_device( nwipe_context_t*** c, PedDevice* dev, int dcount )
     if( nwipe_options.nousb )
     {
         /* retrieve bus and drive serial number, HOWEVER we are only interested in the bus at this time */
-        r = nwipe_get_device_bus_type_and_serialno( dev->path, &bus, &is_ssd, tmp_serial );
+        r = nwipe_get_device_bus_type_and_serialno( dev->path, &bus, &is_ssd, tmp_serial, tmp_device_model );
 
         /* See nwipe_get_device_bus_type_and_serialno() function for meaning of these codes */
         if( r == 0 || ( r >= 3 && r <= 6 ) )
@@ -204,7 +205,13 @@ int check_device( nwipe_context_t*** c, PedDevice* dev, int dcount )
     memset( next_device, 0, sizeof( nwipe_context_t ) );
 
     /* Get device information */
-    next_device->device_model = dev->model;
+    next_device->device_model = strdup( tmp_device_model );
+    if( next_device->device_model == NULL )
+    {
+        nwipe_perror( errno, __FUNCTION__, "strdup" );
+        nwipe_log( NWIPE_LOG_FATAL, "Unable to copy the device model family." );
+        return 0;
+    }
     remove_ATA_prefix( next_device->device_model );
 
     /* Some USB adapters have drive model endian swapped, pattern match and fix */
@@ -488,7 +495,7 @@ char* trim( char* str )
     return str;
 }
 
-int nwipe_get_device_bus_type_and_serialno( char* device, nwipe_device_t* bus, int* is_ssd, char* serialnumber )
+int nwipe_get_device_bus_type_and_serialno( char* device, nwipe_device_t* bus, int* is_ssd, char* serialnumber, char* device_model )
 {
     /* The caller provides a string that contains the device, i.e. /dev/sdc, also a pointer
      * to an integer (bus type), another pointer to an integer (is_ssd), and finally a 21 byte
@@ -806,6 +813,14 @@ int nwipe_get_device_bus_type_and_serialno( char* device, nwipe_device_t* bus, i
                     }
 
                     nwipe_log( NWIPE_LOG_INFO, "smartctl: %s", result );
+                }
+
+                if( strstr( result, "model family:" ) != 0 )
+                {
+                    trim( &result[14] );
+
+                    strncpy( device_model, &result[14], 128 );
+                    device_model[127] = 0;
                 }
 
                 if( strstr( result, "serial number:" ) != 0 )
